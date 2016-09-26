@@ -1,0 +1,31 @@
+/* responsive.css Jack O'Shea*/
+
+.homer {
+  width: 312px;
+  height: 312px;
+  background-image: url('homer.jpg');
+}
+
+@media only screen and (max-width: 400px) {
+    .homer {
+        background-position: -314px -313px;
+    }
+}
+
+@media only screen and (min-width: 400px) and (max-width: 800px) {
+    .homer {
+        background-position: 0px -313px;
+    }
+}
+
+@media only screen and (min-width: 800px) and (max-width: 1200px) {
+    .homer {
+        background-position: -314px 0px;
+    }
+}
+
+@media only screen and (min-width: 1200px) {
+    .homer {
+        background-position: 0px 0px;
+    }
+}
