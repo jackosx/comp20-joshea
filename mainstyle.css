@@ -1,0 +1,98 @@
+/*mainstyle.css*/
+
+@import 'https://fonts.googleapis.com/css?family=Open+Sans';
+
+
+body {
+	background-color: #3fbdd8;
+	background-image: url("floatingTiles.png"),url("face.png");
+	background-position: left top,right bottom;
+	background-size: auto,contain; 
+	background-repeat: repeat,no-repeat;
+	text-align: center;
+	background-attachment: fixed,fixed;
+	font-family: 'Open Sans', sans-serif;
+	color:white;
+}
+
+.menu-bar {
+	top:0;
+	right: 0;
+	width: 100%;
+	height: 40pt;
+	line-height: 40pt;
+}
+
+#menu-list {
+	height: 100%;
+	background-color: white;
+	margin-top: 0;
+	box-shadow: 0pt 0pt 3pt gray;
+	list-style-type: none;
+	list-style: none;
+	text-decoration: none;
+}
+
+#menu-list li {
+	text-decoration: none;
+	float: left;
+	color:grey;
+}
+#menu-list a{
+	top:0;
+	color: grey;
+	padding: 8pt;
+	display: block;
+}
+
+
+a {
+	text-decoration: none;
+}
+
+
+/*@keyframes slideIn {
+    from {margin-top: 110%;}
+    to {margin-top: 60pt;}
+} validator was giving me errors for this */
+
+.resume{
+	text-align: left;
+	color: #515151;
+	margin-right: 17%;
+	margin-left: 17%;
+	margin-top: 60pt;
+	margin-bottom: 0pt;
+	background-color: white;
+	padding: 30pt;
+	padding-top: 5pt;
+	box-shadow: 1pt -1pt 4pt grey;
+
+/*	animation-name: slideIn;
+	animation-delay: 0.5s;
+	animation-duration: 1s;
+	removed for now*/
+}
+
+.paper-center{
+	text-align: center;
+}
+
+.pol-pic{
+	margin: 7pt;
+	padding: 7pt;
+	padding-bottom: 20pt;
+	background-color: white;
+	height: auto;
+	width: 100pt;
+	box-shadow:  0 0 3px gray; 
+}
+
+.right-img {
+	margin-left: 12pt;
+	float: right;
+}
+
+.rSection {
+	padding-top: 10pt;
+}
