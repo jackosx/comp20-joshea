@@ -1,6 +1,7 @@
 // mbta.js
 
 var map;
+var allInfoWindows = [];
 var curCoords = {lat:42.3591782, lng:-71.049571};
 var stops = [
     ['South Station',42.352271,-71.05524200000001], //0
@@ -44,7 +45,8 @@ function getCurCoords(){
             curCoords.lat =  curPos.coords.latitude;
             curCoords.lng =  curPos.coords.longitude;
             console.log(curCoords);
-            placeMarker('Me',curCoords,'#0099FF');
+            drawLineToClosestStop();
+            placeMarker('Me',curCoords,'#0099FF', "You Are Here.");
         });
     }
     else {
@@ -52,8 +54,8 @@ function getCurCoords(){
     }
 }
 
-function placeMarker(mTitle,coords,color){
-    newMarker = new google.maps.Marker({
+function placeMarker(mTitle,coords,color,infoString){
+    var newMarker = new google.maps.Marker({
         position: coords,
         title: mTitle,
         icon: {
@@ -65,6 +67,26 @@ function placeMarker(mTitle,coords,color){
             },
         });
     newMarker.setMap(map);
+
+    if (typeof infoString === 'undefined')
+        return;
+    
+    var infoWindow = new google.maps.InfoWindow({
+        content: infoString
+    });
+    
+    allInfoWindows.push(infoWindow);
+
+    newMarker.addListener('click', function(){
+        closeAllInfoWindows();
+        infoWindow.open(map,newMarker);
+    });
+}
+
+function closeAllInfoWindows(){
+    for (var i = allInfoWindows.length - 1; i >= 0; i--) {
+        allInfoWindows[i].close();
+    }
 }
 
 getCurCoords();
@@ -73,7 +95,7 @@ function markStops(){
     for (var i = stops.length - 1; i >= 0; i--) {
         curStop = stops[i];
         stopCoord = {lat:curStop[1],lng:curStop[2]};
-        placeMarker(curStop[0],stopCoord,'#FF0000');
+        placeMarker(curStop[0],stopCoord,'#FF0000',curStop[0]);
     }
 }
 
@@ -97,6 +119,32 @@ function createTPath(){
   });
 
   tPath.setMap(map);
+}
+
+function distBetweenCoords(coord1,coord2){
+    var dLat = coord1.lat - coord2.lat;
+    var dLon = coord1.lng - coord2.lng;
+    return Math.sqrt((dLon*dLon)+(dLat*dLat));
+}
+
+function drawLineToClosestStop(){
+    var minIndex = 0;
+    var minDist = distBetweenCoords(curCoords,getStopCoord(0));
+    for (var i = 1; i < stops.length; i++){
+        var curDist = distBetweenCoords(curCoords,getStopCoord(i));
+        if (curDist < minDist) {
+            minDist = curDist;
+            minIndex = i;
+        }
+    }
+    var bluePath = new google.maps.Polyline({
+    path: [curCoords,getStopCoord(minIndex)],
+    geodesic: true,
+    strokeColor: '#0000FF',
+    strokeOpacity: 1.0,
+    strokeWeight: 2
+  });
+  bluePath.setMap(map);
 }
 
 markStops();
