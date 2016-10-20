@@ -6,6 +6,9 @@ html, body {
     padding: 0;
 }
 
+.mapHeader {
+    text-align: center;
+}
 
 #map {
     height: 100%;

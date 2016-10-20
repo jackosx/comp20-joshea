@@ -28,6 +28,34 @@ var stops = [
     ['Braintree',42.2078543,-71.0011385],//21
 ];
 
+//yes I knoe this is probably not the best way to do this
+var stopDict = {
+    'South Station':0,
+    'Andrew':1,
+    'Porter Square':2,
+    'Harvard Square':3,
+    'JFK/UMass':4,
+    'Savin Hill':5,
+    'Park Street':6,
+    'Broadway':7,
+    'North Quincy':8,
+    'Shawmut':9,
+    'Davis':10,
+    'Alewife':11,
+    'Kendall/MIT':12,
+    'Charles/MGH':13,
+    'Downtown Crossing':14,
+    'Quincy Center':15,
+    'Quincy Adams':16,
+    'Ashmont':17,
+    'Wollaston':18,
+    'Fields Corner':19,
+    'Central Square':20,
+    'Braintree':21,
+};
+
+var schedules = [];
+
 var pathOrder = [17,9,19,5,4,1,7,0,14,6,13,12,20,3,2,10,11,10,2,3,20,12,13,6,14,0,7,1,4,8,18,15,16,21];
 
 function initMap() {
@@ -38,15 +66,94 @@ function initMap() {
 }
 initMap();
 
+function addScheduleItem(timeLeft,stationName,destination){
+    var stopIndex = stopDict[stationName];
+    if (typeof schedules[stopIndex] == 'undefined')
+        schedules[stopIndex] = [];
+    var newScheduleArray = schedules[stopIndex];
+    var newETA = Math.floor((timeLeft/60));
+    var newItemString = "To " + destination + " arriving in " + newETA + " minutes";
+    if (newETA == 0) {
+        newItemString = "Train to " + destination + " arriving now";
+    }
+    if (newETA < 0) {
+        newItemString = "Train to " + destination + " boarding now";
+    }
+    var newItem = {schedString:newItemString,ETA:newETA};
+    var i = 0;
+    for (; i<newScheduleArray.length; i++) {
+        var comparisonItem = newScheduleArray[i];
+        if(comparisonItem.ETA < newETA)
+            break;
+    }
+    newScheduleArray.splice(i,0,newItem);
+    schedules[stopIndex] = newScheduleArray;
+}
+
+function getScheduleForStation(stationName){
+    var stopIndex = stopDict[stationName];
+    if (typeof schedules[stopIndex] === 'undefined')
+        return 'No upcoming trains for ' + stationName;
+    var items = schedules[stopIndex];
+    if (items.length == 0)
+        return 'No upcoming trains for ' + stationName;
+    var schedHTML = "<h1 class='mapHeader'>"+stationName + "</h1>";
+    for (var i = items.length - 1; i >= 0; i--) {
+         item = items[i];
+         schedHTML = schedHTML + "<hr>" + item.schedString + "<br>" ;
+     } 
+     return schedHTML;
+}
+
+function generateScheduleErrors(error){
+    for (var i = stops.length - 1; i >= 0; i--) {
+        schedules[i] = [{schedString:'<i>Could not load schedule due to '+error+"</i>",ETA:100000}];
+
+    }
+}
+
+function updateSchedule(){
+    var myRequest = new XMLHttpRequest();
+    myRequest.addEventListener('load',function(){
+        if (this.status >= 400){
+            generateScheduleErrors(this.status);
+        }
+        else {
+             var parsed = JSON.parse(this.responseText);
+            var trips = parsed.TripList.Trips;
+            var curTime = parsed.TripList.CurrentTime;
+            schedules = [];
+            for (var i = trips.length - 1; i >= 0; i--) {
+                var train = trips[i];
+                var destination = train.Destination;
+                var preds = train.Predictions;
+                    for (var j = preds.length - 1; j >= 0; j--) {
+                        var prediction = preds[j];
+                        var station = prediction.Stop;
+                        if (typeof stopDict[station] !== 'undefined')
+                            addScheduleItem(prediction.Seconds,station,destination);
+                    }
+            }
+            for (var i = stops.length - 1; i >= 0; i--) {
+                stops[i]
+            }
+        } 
+        markStops();
+
+    });
+    myRequest.open('GET','https://rocky-taiga-26352.herokuapp.com/redline.json');
+    myRequest.send();
+}
+
+updateSchedule();
 
 function getCurCoords(){
     if (navigator.geolocation){
         navigator.geolocation.getCurrentPosition(function(curPos){
             curCoords.lat =  curPos.coords.latitude;
             curCoords.lng =  curPos.coords.longitude;
-            console.log(curCoords);
             drawLineToClosestStop();
-            placeMarker('Me',curCoords,'#0099FF', "You Are Here.");
+            placeMarker(curCoords,false);
         });
     }
     else {
@@ -54,7 +161,28 @@ function getCurCoords(){
     }
 }
 
-function placeMarker(mTitle,coords,color,infoString){
+function placeMarker(coords,isStop,index){
+    if (isStop)
+        color = '#FF0000';
+    else
+        color = '#0099FF';
+
+    var infoString;
+    var markStop;
+    var mTitle;
+    if (isStop){
+        markStop = stops[index];
+        infoString = markStop[0];
+        mTitle = markStop[0];
+    }
+    else{
+        mTitle = "You Are Here";
+        infoString = closestStopInfo();
+    }
+    var infoWindow = new google.maps.InfoWindow({
+        content: infoString
+    });
+
     var newMarker = new google.maps.Marker({
         position: coords,
         title: mTitle,
@@ -67,15 +195,14 @@ function placeMarker(mTitle,coords,color,infoString){
             },
         });
     newMarker.setMap(map);
-
-    if (typeof infoString === 'undefined')
-        return;
-    
-    var infoWindow = new google.maps.InfoWindow({
-        content: infoString
-    });
     
     allInfoWindows.push(infoWindow);
+    if (isStop){
+        markStop.push(infoWindow)
+        stop[index] = markStop;
+        infoWindow.setContent(getScheduleForStation(mTitle));
+
+    }
 
     newMarker.addListener('click', function(){
         closeAllInfoWindows();
@@ -95,12 +222,11 @@ function markStops(){
     for (var i = stops.length - 1; i >= 0; i--) {
         curStop = stops[i];
         stopCoord = {lat:curStop[1],lng:curStop[2]};
-        placeMarker(curStop[0],stopCoord,'#FF0000',curStop[0]);
+        placeMarker(stopCoord,true,i);
     }
 }
 
 function getStopCoord(stopNum){
-    console.log('stopNum: ' + stopNum + ' is '+stops[stopNum]);
     stop = stops[stopNum];
     return {lat:stop[1],lng:stop[2]};
 }
@@ -122,12 +248,35 @@ function createTPath(){
 }
 
 function distBetweenCoords(coord1,coord2){
-    var dLat = coord1.lat - coord2.lat;
+    var lat1 = coord1.lat;
+    var lat2 = coord2.lat;
+    var lon1 = coord1.lng;
+    var lon2 = coord2.lng;
+
+    var R = 6371e3; // metres
+    var φ1 = toRadians(lat1);
+    var φ2 = toRadians(lat2);
+    var Δφ = toRadians(lat2-lat1);
+    var Δλ = toRadians(lon2-lon1);
+
+    var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    var d = R * c;
+
+    return d/1609.34;
+    /*var dLat = coord1.lat - coord2.lat;
     var dLon = coord1.lng - coord2.lng;
-    return Math.sqrt((dLon*dLon)+(dLat*dLat));
+    return Math.sqrt((dLon*dLon)+(dLat*dLat));*/
 }
 
-function drawLineToClosestStop(){
+function toRadians(degrees){
+    return degrees*Math.PI/180;
+}
+
+function indexOfClosestStop(){
     var minIndex = 0;
     var minDist = distBetweenCoords(curCoords,getStopCoord(0));
     for (var i = 1; i < stops.length; i++){
@@ -137,6 +286,11 @@ function drawLineToClosestStop(){
             minIndex = i;
         }
     }
+    return minIndex;
+}
+
+function drawLineToClosestStop(){
+    var minIndex = indexOfClosestStop();
     var bluePath = new google.maps.Polyline({
     path: [curCoords,getStopCoord(minIndex)],
     geodesic: true,
@@ -147,5 +301,12 @@ function drawLineToClosestStop(){
   bluePath.setMap(map);
 }
 
-markStops();
+function closestStopInfo(){
+    var minIndex = indexOfClosestStop();
+    var minDist = distBetweenCoords(curCoords,getStopCoord(minIndex));
+    var closestName = stops[minIndex][0];
+    return "The Nearest Red Line Station is:<br>" 
+        + closestName + "<br>Located " + minDist.toFixed(2) + " miles away.";
+}
+
 createTPath();
