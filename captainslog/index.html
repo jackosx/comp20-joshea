@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Captain's Log</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+    function main(){
+        var field = $('#msg');
+         field.on('keypress', function (e) {
+             if(e.which === 13){
+                processMessage($(this).val());
+                $(this).val("");
+             }
+            });
+         
+         var oldMsgs = getMessages();
+         for (var i = 0; i < oldMsgs.length; i++) {
+             displayMessage(oldMsgs[i]);
+         }
+     }
+
+    function getMessages(){
+        var oldMsgs = JSON.parse(localStorage.getItem("messages"));
+        if (typeof oldMsgs == 'undefined' || oldMsgs == null)
+            oldMsgs = [];
+        return oldMsgs;
+    }
+
+    function processMessage(msg){
+        var now = new Date();
+        msgString = now.toString() + ' - ' +msg;
+        var oldMsgs = getMessages();
+        oldMsgs.push(msgString);
+        localStorage.setItem('messages',JSON.stringify(oldMsgs));
+        displayMessage(msgString);
+    }
+
+    function displayMessage(msg){
+        $('#log').after('<p>' + msg + '</p>');
+    }
+
+    
+    $(document).ready(main);   
+    </script>
+</head>
+
+<body>
+    <h1>Captain's Log</h1>
+    <h3>New entry: <input type="text" id="msg" name="msg" size="30" /></h3>
+    <div id="log"></div>
+</body>
+</html>
