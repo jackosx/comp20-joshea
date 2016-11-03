@@ -141,7 +141,8 @@ function updateSchedule(){
         markStops();
 
     });
-    myRequest.open('GET','https://rocky-taiga-26352.herokuapp.com/redline.json');
+    //myRequest.open('GET','http://localhost:5000/redline.json'); // FOR TESTING
+    myRequest.open('GET','https://peaceful-beach-93330.herokuapp.com/redline.json');
     myRequest.send();
 }
 
