@@ -27,3 +27,4 @@ It should include values for the following keys:
     grid
     username
 
+Completion time: 8hrs? Not sure
