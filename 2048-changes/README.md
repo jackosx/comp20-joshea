@@ -27,4 +27,4 @@ It should include values for the following keys:
     grid
     username
 
-Completion time: 8hrs? Not sure
+Completion time: 6hrs? Not sure I spent a while trying to make the prompt appear after the Game Over message
