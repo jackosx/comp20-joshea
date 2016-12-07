@@ -1,0 +1,44 @@
+/*security.css*/
+
+@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro');
+
+body {
+	font-family: 'Source Sans Pro';
+	font-weight: 100;
+	color: white;
+	background-color: #2a2a2a;
+	padding: 20pt;
+}
+
+div {
+	padding: 10pt;
+}
+
+#main-title {
+	padding    : 15pt;
+	padding-top: 50pt;
+	text-align : center;
+	font-size  : 24pt;
+	font-weight: bold;
+}
+
+.divider {
+	margin: 20pt;
+}
+
+a {
+	color: #FAFAFA
+}
+
+.title{
+	font-weight: 900;
+}
+
+li {
+	padding: 12pt;
+}
+
+img {
+	width:100%;
+	height: auto;
+}

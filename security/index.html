@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>Security Assessment</title>
+	<link rel="stylesheet" type="text/css" href="security.css">
+</head>
+<body>
+	<div id="main-title">
+		Security Assessment of<br>https://fathomless-earth-39413.herokuapp.com
+	</div>
+	<hr class="divider">
+	<div class="body">
+	</div>
+	<div>
+		<span class="title">Introduction</span>
+		<br>
+		<span>This document lists and analyzes various vulnerabilities and unspecified behaviors of <a href="https://fathomless-earth-39413.herokuapp.com">https://fathomless-earth-39413.herokuapp.com</a> (Emma Plankey's). They were all found via quasi-black box testing. I say 'quasi' because having built my own version of the site I started the attacks with a knowledge of how things probably worked. </span>
+	</div>
+	<div>
+		<span class="title">Methodology</span>
+		<br>
+		<span>Postman was used to try different inputs against various routes. The first vulnerability exploited revealed the server source code which lists all routes for the web app. From there Postman was more handy and I could try different inputs for each route and see what happened.</span>
+	</div>
+	<div>
+		<span class="title">Abstract of Findings</span>
+		<br>
+		<span>The issues found range from severe vulnerabilities that could harm users to simple hacks that would allow users to cheat. The most severe vulnerability essentially allows attackers to modify the gamecenter homepage itself. One vulnerability also allows anyone to look at the source code of the site.</span>
+	</div>
+	<ol> 
+		<li>
+			<span class="title">Everything is Available to Everyone</span>
+			<br>
+			<span>Knowing that Heroku Apps are usually run from a file called 'index.js' I decided to see what would happen if I sent a GET request to <code>http://fathomless-earth-39413.herokuapp.com/index.js</code>. The response was the 'index.js' file that handles all server-side processes.
+			<br>
+			This happens because of line 13 in index.js: <code>app.use(express.static(__dirname + '/'));</code> This line comes before enabling any other middleware or routes are set, so when the server receives a request the very first thing it does is see if a file exists on the server with the request path. If it does, that file is immediately returned as a response. Static content that is meant to be servered to anyone should be stored in a sub-directory on the server, maybe named something like 'public.' Then line 13 should be changed to <code>app.use(express.static(__dirname + '/public'));</code> Line 13 is also repeated on line 27 and that line should be removed. 
+			<br>Exploiting this vulnerability to get the server's source code made finding the other vulnerabilities pretty easy.</span>
+		</li>
+		<li>
+			<span class="title">Vulnerable to Stored Cross-Site-Scripting (XSS)</span>
+			<br>
+			<span>The gamecenter page is vulnerable to cross site scripting. Using the POST <code>/submit.json</code> route an attacker can submit HTML content as the value for 'username'. This HTML will be rendered on the gamecenter page. If it includes any Javascript inside <code>&lt;script&gt; &lt;/script&gt;</code> tags, this Javascript will be executed. Visit the site <a href="https://fathomless-earth-39413.herokuapp.com">here</a> for proof. (It's worth it).
+			<br>
+			<img alt='RickRoll XSS' src="/RickRoll.png">
+			<br>
+			This is the most serious vulnerability, as it is the only one that could reach beyond the scope of the game to harm users. The vulnerability could aid an attacker in carrying out CSRF attacks on anyone that visits the gamecenter and has an ongoing session at another site vulnerable to CSRF.
+			<br>
+			There are two things that must be implemented to protect against this. User input must be cleaned before storing it in the database. Also, when things from the database are sent to the client to be rendered in the browser any special characters should be escaped as well. This protects users in the case that the database is compromised and an attacker can directly deposit Javacript or HTML in the database.</span>
+		</li>
+		<li>
+			<span class="title">Vulnerable to Mongo Injections</span>
+			<br>
+			<span>The GET <code>'/scores.json'</code> route is susceptible to injections, mainly because the 'bodyparser' middleware is used with the urlencoded.extended option set to true. This causes query strings to be parsed using the 'qs' module. The 'qs' module allows users/attackers to construct JSON objects in the query string using the format: <code>?targetKey[arbitrarySubKey]=somevalue</code>. The middleware will interpret this query as: <code>{ targetKey : {arbitrarySubkey : somevalue} }</code> 
+			<br>
+			When an attacker sends a GET request to '<code>/scores.json?username[$gt]=</code>' the value of 'username' is interpreted as <code>{$gt : }</code> This is a Mongo query selector that will select all documents with non-null values for a given field. This GET request will thus return every score document with a non-null username. This isn't a huge privacy concern, however, as all those documents are publicly available and nicely organized on the gamecenter page. To fix it either stop using the 'qs' module or ensure only a string will be used as the value for the 'username' key in the Mongo query.
+			</span>
+		</li>
+		<li>
+			<span class="title">Game Data Can be Posted from Anywhere</span>
+			<br>
+			<span>Although it isn't particularly dangerous for users, the integrity of the scoreboard is easily compromised as anyone can send a POST request to '<code>/submit.json</code>,' submitting a new (possibly fake) high score. To prevent this the server could check that all POST requests originate from a known 2048 game page, eg. <code>if (req.origin == 'someknownorigin') { process request }</code></span> <!--How does SOP affect POST Request? The post will still be received and processed by the server right?  The client just won't be able to read the response -->
+		</li>
+		<li>
+			<span class="title">Sensitive Information Hard-Coded Into Server Code</span>
+			<br>
+			<span>Looking at the server code revealed admin MongoDB credentials are hard-coded on line 13. As it stands, the server first looks for Mongo credentials in the environment variables, and if it cannot find them defaults to the hard-coded database URL. This means fixing it should be pretty easy, just remove the hard coded URL from the end of the line and everything should continue to work just fine.
+			<br>
+			The severity of this issue depends on who has access to the source code. Regular visitors to the site can't exploit it, but anyone who has access to or gets the server cource code will have total control over the Mongo database. Unfortunately, Vulnerability 1 means that anyone who simply requests index.js has access to the source code.
+			</span><br>
+			<img alt="Mongo Hacked" src="Mongo.png">
+		</li>	
+	</ol>
+	<div>
+		<span class="title">Conclusion</span>
+		<br>
+		<span>Vulnerabilities 1, 2, and 5 are the most pressing and should be fixed first. The most important is ensuring XSS is not possible, as that could harm users who visit the gamecenter. Since the Mongo credentials have been publicly available, all Mongo users should be deleted and a new admin created. Next all documents containing malicious content should be removed from the database. </span>
+	</div>
+</body>
+</html>
